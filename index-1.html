@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Review Responder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1117;
+      --surface:   #181c27;
+      --card:      #1e2333;
+      --border:    #2a3045;
+      --border-hi: #3b4560;
+      --accent:    #4f7cff;
+      --accent-lo: rgba(79,124,255,.12);
+      --accent-glow: rgba(79,124,255,.25);
+      --green:     #2dcea8;
+      --red:       #ff5c5c;
+      --text:      #e8eaf0;
+      --muted:     #7b82a0;
+      --subtle:    #3a4060;
+      --radius:    12px;
+      --radius-lg: 18px;
+      --font-head: 'DM Serif Display', Georgia, serif;
+      --font-body: 'DM Sans', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    header {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 56px 24px 0;
+      text-align: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-lo);
+      border: 1px solid var(--accent-glow);
+      padding: 4px 12px;
+      border-radius: 100px;
+      margin-bottom: 20px;
+    }
+
+    .badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .4; transform: scale(.7); }
+    }
+
+    h1 {
+      font-family: var(--font-head);
+      font-size: clamp(32px, 6vw, 52px);
+      font-weight: 400;
+      letter-spacing: -.01em;
+      line-height: 1.15;
+      margin-bottom: 14px;
+      background: linear-gradient(135deg, #e8eaf0 0%, #a0a8c8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .tagline {
+      font-size: 17px;
+      color: var(--muted);
+      font-weight: 300;
+      max-width: 440px;
+      margin: 0 auto 48px;
+    }
+
+    main {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    .form-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 36px;
+      margin-bottom: 32px;
+    }
+
+    .form-section-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .form-section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .form-group.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    input, select, textarea {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      padding: 12px 14px;
+      transition: border-color .2s, box-shadow .2s;
+      outline: none;
+      width: 100%;
+      -webkit-appearance: none;
+    }
+
+    input::placeholder, textarea::placeholder { color: var(--subtle); }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-lo);
+    }
+
+    select {
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237b82a0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+
+    select option { background: #1e2333; }
+
+    textarea {
+      resize: vertical;
+      min-height: 110px;
+      line-height: 1.6;
+    }
+
+    .star-group { display: flex; flex-direction: column; gap: 7px; }
+
+    .stars {
+      display: flex;
+      gap: 6px;
+      padding: 10px 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    .star {
+      font-size: 22px;
+      cursor: pointer;
+      transition: transform .15s, filter .15s;
+      filter: grayscale(1) brightness(.5);
+      user-select: none;
+      line-height: 1;
+    }
+
+    .star.active { filter: grayscale(0) brightness(1); }
+    .star:hover { transform: scale(1.2); }
+
+    .star-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+      margin-left: auto;
+      align-self: center;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 28px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 13px 24px;
+      transition: all .2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      letter-spacing: .01em;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      flex: 1;
+      justify-content: center;
+      font-size: 15px;
+      padding: 15px 28px;
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+
+    .btn-primary:hover {
+      background: #6b8fff;
+      box-shadow: 0 6px 28px rgba(79,124,255,.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-primary:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--border-hi);
+      color: var(--text);
+      background: var(--card);
+    }
+
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #output-section {
+      display: none;
+      animation: fadeUp .4s ease;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .output-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .output-title {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .response-meta {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--subtle);
+    }
+
+    .response-cards { display: flex; flex-direction: column; gap: 16px; }
+
+    .response-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      transition: border-color .2s;
+    }
+
+    .response-card:hover { border-color: var(--border-hi); }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+    }
+
+    .card-tag {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tag-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .tag-dot.short    { background: var(--green); }
+    .tag-dot.balanced { background: var(--accent); }
+    .tag-dot.detailed { background: #c97bff; }
+
+    .tag-name {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: .06em;
+      color: var(--text);
+    }
+
+    .tag-desc { font-size: 11px; color: var(--muted); margin-left: 4px; }
+
+    .btn-copy {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .06em;
+      padding: 6px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all .2s;
+    }
+
+    .btn-copy:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-lo);
+    }
+
+    .btn-copy.copied {
+      border-color: var(--green);
+      color: var(--green);
+      background: rgba(45,206,168,.1);
+    }
+
+    .card-body { padding: 20px; }
+
+    .response-text {
+      font-size: 15px;
+      line-height: 1.75;
+      color: #c8cce0;
+      white-space: pre-wrap;
+    }
+
+    .error-msg {
+      background: rgba(255,92,92,.08);
+      border: 1px solid rgba(255,92,92,.25);
+      border-radius: var(--radius);
+      color: #ff9999;
+      font-size: 13px;
+      padding: 12px 16px;
+      margin-top: 16px;
+      display: none;
+    }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--subtle);
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 580px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .form-card { padding: 24px 20px; }
+      h1 { font-size: 30px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="badge">AI-Powered</div>
+    <h1>Review Responder</h1>
+    <p class="tagline">Turn customer reviews into professional responses — instantly.</p>
+  </header>
+
+  <main>
+
+    <div class="form-card">
+      <div class="form-section-label">Business Info</div>
+
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label for="businessName">Business Name</label>
+          <input type="text" id="businessName" placeholder="e.g. Bloom Nail Studio" />
+        </div>
+
+        <div class="form-group">
+          <label for="businessType">Business Type</label>
+          <select id="businessType">
+            <option value="">Select type…</option>
+            <option value="restaurant">Restaurant</option>
+            <option value="salon">Salon</option>
+            <option value="electrician">Electrician</option>
+            <option value="realtor">Realtor</option>
+            <option value="dentist">Dentist</option>
+            <option value="med spa">Med Spa</option>
+            <option value="gym">Gym</option>
+            <option value="general business">General Business</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="brandVoice">Brand Voice</label>
+          <select id="brandVoice">
+            <option value="">Select voice…</option>
+            <option value="professional">Professional</option>
+            <option value="friendly">Friendly</option>
+            <option value="luxury">Luxury</option>
+            <option value="casual">Casual</option>
+            <option value="empathetic">Empathetic</option>
+            <option value="upbeat">Upbeat</option>
+          </select>
+        </div>
+
+        <div class="form-group star-group">
+          <label>Review Rating</label>
+          <div class="stars" id="starsContainer">
+            <span class="star" data-value="1">⭐</span>
+            <span class="star" data-value="2">⭐</span>
+            <span class="star" data-value="3">⭐</span>
+            <span class="star" data-value="4">⭐</span>
+            <span class="star" data-value="5">⭐</span>
+            <span class="star-label" id="starLabel">Tap to rate</span>
+          </div>
+        </div>
+
+        <div class="form-group full">
+          <label for="reviewText">Customer Review</label>
+          <textarea id="reviewText" placeholder="Paste the customer's review here…"></textarea>
+        </div>
+
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="generateBtn" onclick="generateResponses()">
+          <span id="btnIcon">✦</span>
+          <span id="btnText">Generate Responses</span>
+          <div class="spinner" id="spinner"></div>
+        </button>
+        <button class="btn btn-ghost" onclick="clearForm()">Clear</button>
+      </div>
+
+      <div class="error-msg" id="errorMsg"></div>
+    </div>
+
+    <div id="output-section">
+      <div class="output-header">
+        <span class="output-title">Generated Responses</span>
+        <span class="response-meta" id="responseMeta"></span>
+      </div>
+
+      <div class="response-cards">
+
+        <div class="response-card" id="card-short">
+          <div class="card-header">
+            <div class="card-tag">
+              <div class="tag-dot short"></div>
+              <span class="tag-name">SHORT</span>
+              <span class="tag-desc">· Quick & punchy</span>
+            </div>
+            <button class="btn-copy" onclick="copyResponse('short')"><span>⎘</span> COPY</button>
+          </div>
+          <div class="card-body">
+            <p class="response-text" id="resp-short"></p>
+          </div>
+        </div>
+
+        <div class="response-card" id="card-balanced">
+          <div class="card-header">
+            <div class="card-tag">
+              <div class="tag-dot balanced"></div>
+              <span class="tag-name">BALANCED</span>
+              <span class="tag-desc">· Thoughtful & complete</span>
+            </div>
+            <button class="btn-copy" onclick="copyResponse('balanced')"><span>⎘</span> COPY</button>
+          </div>
+          <div class="card-body">
+            <p class="response-text" id="resp-balanced"></p>
+          </div>
+        </div>
+
+        <div class="response-card" id="card-detailed">
+          <div class="card-header">
+            <div class="card-tag">
+              <div class="tag-dot detailed"></div>
+              <span class="tag-name">DETAILED</span>
+              <span class="tag-desc">· In-depth & personal</span>
+            </div>
+            <button class="btn-copy" onclick="copyResponse('detailed')"><span>⎘</span> COPY</button>
+          </div>
+          <div class="card-body">
+            <p class="response-text" id="resp-detailed"></p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <footer>AI Review Responder · MVP v1.0</footer>
+
+  <script>
+    let selectedRating = 0;
+    const responses = { short: '', balanced: '', detailed: '' };
+
+    // ── STARS ──
+    const stars = document.querySelectorAll('.star');
+    const starLabel = document.getElementById('starLabel');
+    const starLabels = ['', 'Terrible', 'Poor', 'Okay', 'Good', 'Excellent'];
+
+    stars.forEach(star => {
+      star.addEventListener('click', () => { selectedRating = +star.dataset.value; updateStars(); });
+      star.addEventListener('mouseenter', () => highlightStars(+star.dataset.value));
+      star.addEventListener('mouseleave', () => updateStars());
+    });
+
+    function highlightStars(n) {
+      stars.forEach(s => s.classList.toggle('active', +s.dataset.value <= n));
+      starLabel.textContent = starLabels[n];
+    }
+
+    function updateStars() {
+      stars.forEach(s => s.classList.toggle('active', +s.dataset.value <= selectedRating));
+      starLabel.textContent = selectedRating ? `${selectedRating}/5 — ${starLabels[selectedRating]}` : 'Tap to rate';
+    }
+
+    // ── CLEAR ──
+    function clearForm() {
+      document.getElementById('businessName').value = '';
+      document.getElementById('businessType').value = '';
+      document.getElementById('brandVoice').value = '';
+      document.getElementById('reviewText').value = '';
+      selectedRating = 0;
+      updateStars();
+      document.getElementById('output-section').style.display = 'none';
+      showError('');
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('errorMsg');
+      el.textContent = msg;
+      el.style.display = msg ? 'block' : 'none';
+    }
+
+    function setLoading(on) {
+      document.getElementById('generateBtn').disabled = on;
+      document.getElementById('btnIcon').style.display = on ? 'none' : 'inline';
+      document.getElementById('spinner').style.display = on ? 'block' : 'none';
+      document.getElementById('btnText').textContent = on ? 'Generating…' : 'Generate Responses';
+    }
+
+    // ── GENERATE — calls your secure /api/generate endpoint ──
+    async function generateResponses() {
+      const name   = document.getElementById('businessName').value.trim();
+      const type   = document.getElementById('businessType').value;
+      const voice  = document.getElementById('brandVoice').value;
+      const review = document.getElementById('reviewText').value.trim();
+
+      if (!name)           return showError('Please enter your business name.');
+      if (!type)           return showError('Please select a business type.');
+      if (!voice)          return showError('Please select a brand voice.');
+      if (!selectedRating) return showError('Please select a star rating.');
+      if (!review)         return showError('Please paste a customer review.');
+
+      showError('');
+      setLoading(true);
+      document.getElementById('output-section').style.display = 'none';
+
+      try {
+        const res = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, type, voice, rating: selectedRating, review })
+        });
+
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        parseAndRender(data.raw, name, type, voice);
+
+      } catch (err) {
+        showError('Something went wrong. Please try again. (' + err.message + ')');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // ── PARSE ──
+    function parseAndRender(raw, name, type, voice) {
+      const extract = (tag) => {
+        const re = new RegExp(`${tag}:\\s*([\\s\\S]*?)(?=OPTION_|$)`, 'i');
+        const m = raw.match(re);
+        return m ? m[1].trim() : '';
+      };
+
+      responses.short    = extract('OPTION_SHORT');
+      responses.balanced = extract('OPTION_BALANCED');
+      responses.detailed = extract('OPTION_DETAILED');
+
+      if (!responses.short && !responses.balanced && !responses.detailed) {
+        showError('Could not parse the response. Please try again.');
+        return;
+      }
+
+      document.getElementById('resp-short').textContent    = responses.short;
+      document.getElementById('resp-balanced').textContent = responses.balanced;
+      document.getElementById('resp-detailed').textContent = responses.detailed;
+
+      const emoji = ['', '😞', '😕', '😐', '😊', '🌟'][selectedRating];
+      document.getElementById('responseMeta').textContent =
+        `${name} · ${type} · ${voice} voice · ${selectedRating}★ ${emoji}`;
+
+      const section = document.getElementById('output-section');
+      section.style.display = 'block';
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ── COPY ──
+    function copyResponse(key) {
+      if (!responses[key]) return;
+      navigator.clipboard.writeText(responses[key]).then(() => {
+        const btn = document.querySelector(`#card-${key} .btn-copy`);
+        btn.classList.add('copied');
+        btn.innerHTML = '<span>✓</span> COPIED';
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.innerHTML = '<span>⎘</span> COPY';
+        }, 2000);
+      });
+    }
+
+    document.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') generateResponses();
+    });
+  </script>
+
+</body>
+</html>
